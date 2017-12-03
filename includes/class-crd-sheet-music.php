@@ -66,7 +66,7 @@ class CRD_Sheet_Music {
         $nonce = '<input type="hidden" name="crd_save_song_nonce" id="crd_save_song_nonce" value="' . $nonce_value. '" />';
 
         // Create textarea for song content
-        $html = '<textarea name="crd_song" cols="40" rows="10" style="width: 100%">';
+        $html = '<textarea name="crd_song" cols="40" rows="40" style="width: 100%">';
         $html .= $content;
         $html .= '</textarea>';
         $html .= $nonce;
@@ -115,8 +115,25 @@ class CRD_Sheet_Music {
         // Save the song
         if ( isset( $_POST['crd_song']) && ! empty( $_POST['crd_song'] ) ) {
             CRD_Log::write( 'Updating post meta' );
+			$directives_default = array( /*0 => array(*/
+						'title' => '--',
+						'artist' => '--',
+						'genre' => '--',
+						'key' => '--',
+						'capo' => '--',
+						'time' => '--',
+						'tempo' => '--'/*)*/
+						);
             update_post_meta( $post_id, '_crd_song', $_POST['crd_song'] );
             update_post_meta( $post_id, '_crd_song_location', $_POST['crd_song_location'] );
+			$directives_as_meta = CRD_Sheet_Music::get_directives_as_meta($post_id, $_POST['crd_song']);
+			
+			
+			$directives = array_replace($directives_default, $directives_as_meta);
+			//var_dump($directives);
+			
+            update_post_meta( $post_id, '_crd_song_meta', $directives );
+            update_post_meta( $post_id, '_crd_song_artist', $directives['artist'] );
         }
         else {
             CRD_Log::write( 'Deleting post meta' );
@@ -124,6 +141,12 @@ class CRD_Sheet_Music {
             delete_post_meta( $post_id, '_crd_song_location' );
         }
     }
+
+	public static function get_directives_as_meta($id, $content)
+	{
+		$parser = new CRD_Parser();
+		return $parser->get_the_directives_as_meta( $content );
+	}
 
     public static function render_song( $content ) {
         global $post;
@@ -133,7 +156,7 @@ class CRD_Sheet_Music {
         if ( 'crd_sheet_music' ==  $post_type ) {
             $location = get_post_meta( $post->ID, '_crd_song_location', true );
             $song = get_post_meta( $post->ID, '_crd_song', true );
-            $song = '[chordwp]' . $song . '[/chordwp]';
+            //$song = '[chordwp]' . $song . '[/chordwp]';
             $song_html = do_shortcode( $song );
 
             if ( has_filter('crd_the_song') ) {
